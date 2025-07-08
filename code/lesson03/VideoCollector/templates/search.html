@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block main_content %}
+<div class="search-inputs">
+    <h1>Search Videos</h1>
+    <input
+    name="search_text"
+    placeholder="Search for videos"
+    type="text"
+    class="form-control"
+    hx-get="{% url 'search' %}"
+    hx-target="#search-results"
+    hx-trigger="keyup[target.value.length > 1] changed delay:500ms"
+    value="{{ search_text}}" {# Affiche le terme recherché même après rechargement/partage d'URL #}
+    hx-push-url="true" {# Met à jour l'URL pour permettre partage et navigation #}
+    >
+</div>
+
+    <div class="videos search-results" id="search-results">
+        {% include "partials/search_results.html" %}
+    </div>
+
+
+
+{% endblock %}

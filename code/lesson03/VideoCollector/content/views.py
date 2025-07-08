@@ -1,7 +1,16 @@
 # VideoCollector/content/views.py
 import more_itertools
+import urllib
 from content.models import Category, Video
 from django.shortcuts import get_object_or_404, render
+from django import forms
+from django.db.models import Q
+
+
+VideoForm = forms.modelform_factory(
+    Video,
+    fields=["youtube_id", "title", "author", "view_count"],
+)
 
 
 def home(request):
@@ -13,8 +22,15 @@ def home(request):
 
 def category(request, name):
     category = get_object_or_404(Category, name__iexact=name)
+    if request.method == "POST":
+        form = VideoForm(request.POST)
+        if form.is_valid():
+            video = form.save()
+            video.categories.add(category)
+    else:
+        form = VideoForm()
     videos = Video.objects.filter(categories=category)
-    data = {"category": category, "rows": more_itertools.chunked(videos, 3)}
+    data = {"category": category, "rows": more_itertools.chunked(videos, 3), "form": form}
 
     return render(request, "category.html", data)
 
@@ -31,3 +47,40 @@ def feed(request):
     }
 
     return render(request, "feed.html", data)
+
+
+def add_video_form(request, name):
+    category = get_object_or_404(Category, name__iexact=name)
+    data = {"category": category}
+
+    return render(request, "partials/add_video_form.html", data)
+
+
+def add_video_link(request, name):
+    category = get_object_or_404(Category, name__iexact=name)
+    data = {"category": category}
+
+    return render(request, "partials/add_video_link.html", data)
+
+
+def search(request):
+    search_text = request.GET.get("search_text", "")
+    
+    videos = None
+    
+    if search_text:
+        parts = search_text.split()
+        # Commence avec le premier mot : recherche dans titre OU auteur
+        q = Q(title__icontains=parts[0]) | Q(author__icontains=parts[0])
+        # Pour chaque mot suivant, ajoute une condition OR
+        # Ex: "python django" → trouve si titre/auteur contient "python" OU "django"
+        for part in parts[1:]:
+            q |= Q(title__icontains=part) | Q(author__icontains=part)
+        videos = Video.objects.filter(q).distinct()
+    
+    data = {"search_text": search_text, "videos": videos}
+    
+    if request.htmx:
+        return render(request, "partials/search_results.html", data)
+
+    return render(request, "search.html", data)
