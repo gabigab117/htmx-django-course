@@ -1,6 +1,6 @@
 # VideoCollector/content/views.py
 import more_itertools
-import urllib
+from django.core.paginator import Paginator
 from content.models import Category, Video
 from django.shortcuts import get_object_or_404, render
 from django import forms
@@ -42,10 +42,34 @@ def play_video(request, video_id):
 
 
 def feed(request):
+    videos = Video.objects.all()
+    
+    paginator = Paginator(videos, 2)
+    
+    # Récupère le numéro de page depuis les paramètres GET (défaut: page 1)
+    page_num = int(request.GET.get("page", 1))
+    
+    # Validation du numéro de page pour éviter les erreurs
+    if page_num < 1:
+        page_num = 1  # Si négatif, retourne à la page 1
+    elif page_num > paginator.num_pages:
+        page_num = paginator.num_pages  # Si trop grand, va à la dernière page
+    
+    # Récupère l'objet Page correspondant au numéro demandé
+    page = paginator.page(page_num)
+    
+    # Prépare les données pour le template
     data = {
-        "videos": Video.objects.all(),
+        "videos": page.object_list,      # Les vidéos de la page actuelle
+        "more_videos": page.has_next(),  # Booléen: y a-t-il d'autres pages après ?
+        "next_page": page_num + 1        # Numéro de la page suivante pour le bouton "Load More"
     }
-
+    
+    if request.htmx:
+        import time
+        time.sleep(2)
+        return render(request, "partials/feed_results.html", data)
+    
     return render(request, "feed.html", data)
 
 
@@ -66,7 +90,7 @@ def add_video_link(request, name):
 def search(request):
     search_text = request.GET.get("search_text", "")
     
-    videos = None
+    videos = Video.objects.none()
     
     if search_text:
         parts = search_text.split()

@@ -3,17 +3,7 @@
   <div class="recents">
     <h1>Video Collector: Recent Videos</h1>
 
-    {% for video in videos %}
-      <div class="video">
-        <div><span class="title">{{ video.title }}</span></div>
-        <a href="{% url 'play_video' video.id %}">
-          <img src="https://img.youtube.com/vi/{{ video.youtube_id }}/maxresdefault.jpg"
-               class="img img-responsive"
-               alt="{{ video.title }}"
-               title="{{ video.title }}">
-        </a>
-      </div>
-    {% endfor %}
+    {% include 'partials/feed_results.html' %}
 
   </div>
 {% endblock %}
